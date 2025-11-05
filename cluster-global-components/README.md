@@ -170,3 +170,5 @@ Before deploying these components:
 - **RBAC**: Changes require cluster admin permissions
 
 These components form the security and operational foundation for the DukQa microservices platform, ensuring secure, scalable, and compliant operations.
+
+<!-- Pipeline trigger: Testing automated deployment of cluster global components -->
