@@ -9,7 +9,7 @@ on:
       - 'production-cluster/cluster-manifests/argocd/**'
       - 'production-cluster/cluster-manifests/monitoring/**'
       - 'production-cluster/cluster-manifests/infra/**'
-      - '.github/workflows/deploy-cluster-global-components.yaml'
+      - '.github/workflows/deploy-cluster-global-components-fixed.yaml'
   workflow_dispatch:
     inputs:
       deploy_argocd:
@@ -42,7 +42,7 @@ jobs:
       - name: ⚙️ Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::746387399274:role/GitHubActionsEKSAdmin
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
           aws-region: ${{ env.AWS_REGION }}
 
       - name: 🔧 Setup kubectl
