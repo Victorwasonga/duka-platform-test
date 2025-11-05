@@ -1,174 +1,117 @@
 # Cluster Global Components
 
-This directory contains essential Kubernetes-native components that provide foundational services for the entire DukQa platform. These components are deployed once per cluster and support all microservices.
+This directory contains the foundational infrastructure components that are deployed to the EKS cluster. These components provide the essential services and configurations required before deploying applications.
 
-## 🏗️ Architecture Overview
+## 📋 What Gets Deployed
 
-These components bridge the gap between AWS infrastructure (managed by Terraform) and application workloads, providing:
-- **Security Foundation** - RBAC, network policies, and secret management
-- **Observability** - Metrics collection for autoscaling and monitoring
-- **Operational Excellence** - Standardized access patterns and security policies
+### 🏷️ **Namespaces** (`namespaces.yaml`)
+Application isolation and organization:
+- `b2b-fargate` & `b2b-ec2-worker` - B2B applications
+- `b2c-fargate` & `b2c-ec2-worker` - B2C applications  
+- `backoffice-fargate` & `backoffice-ec2-worker` - BackOffice applications
+- `argocd` - GitOps platform
+- `monitoring` - Observability stack
+- `ingress` - Load balancing and routing
 
-## 📁 Directory Structure
+### 🔐 **RBAC Components** (`rbac/`)
+Security and access control:
+- **`dukqa-admin`** - Full cluster admin permissions
+- **`dukqa-developer`** - Developer permissions (pods, deployments, services)
+- **`dukqa-readonly`** - Read-only access for monitoring/auditing
+- **Role Bindings** - Connect users/groups to roles
 
-```
-cluster-global-components/
-├── rbac/                    # Role-Based Access Control
-│   ├── cluster-roles.yaml           # Admin, Developer, ReadOnly roles
-│   └── cluster-role-bindings.yaml   # User/group permissions
-├── monitoring/              # Cluster Observability
-│   └── metrics-server.yaml          # Resource metrics for HPA/VPA
-├── security/               # Security Policies
-│   ├── network-policies.yaml        # Network segmentation rules
-│   └── namespaces.yaml              # Namespace security labels
-└── storage/                # Secret Management
-    ├── secrets-store-csi.yaml       # CSI driver for AWS Secrets Manager
-    └── aws-provider.yaml            # AWS Secrets Manager provider
-```
+### 💾 **Storage Components** (`storage/`)
+Secret management and storage:
+- **Secrets Store CSI Driver** - AWS Secrets Manager integration
+- **AWS Provider** - Enables pods to mount secrets as volumes
+- **Service Account** - IRSA role for secrets access
+- **DaemonSet** - Runs on all nodes for secret mounting
 
-## 🔐 Security Components
+### 📊 **Monitoring Components** (`monitoring/`)
+Observability and metrics:
+- **Metrics Server** - Resource metrics (CPU, memory) for HPA
+- **Service Account & RBAC** - Permissions for metrics collection
+- **Deployment & Service** - Metrics API endpoint
 
-### RBAC (Role-Based Access Control)
-**Purpose**: Implement least-privilege access control across the cluster
+### 🎛️ **ArgoCD Components**
+GitOps platform (deployed via workflow):
+- **Core ArgoCD** - GitOps controller, UI, repo server
+- **LoadBalancer Service** - External AWS NLB access (`argocd-loadbalancer.yaml`)
+- **Ingress** - ALB option for domain-based access (`argocd-ingress.yaml`)
 
-#### Cluster Roles:
-- **`dukqa-admin`** - Full cluster access for platform administrators
-- **`dukqa-developer`** - Application deployment and debugging permissions
-- **`dukqa-readonly`** - Read-only access for monitoring and troubleshooting
+## 🔄 Deployment Flow
 
-#### Why These Roles:
-- **Security**: Prevents accidental cluster-wide changes
-- **Compliance**: Audit trail of who can access what
-- **Operational Safety**: Developers can't break cluster-level components
+The GitHub Actions workflow deploys components in this order:
 
-### Network Policies
-**Purpose**: Implement zero-trust networking at the Kubernetes level
+1. **Namespaces** → Create isolated environments
+2. **RBAC** → Set up security and permissions  
+3. **Storage** → Enable secret management
+4. **Monitoring** → Enable resource metrics
+5. **ArgoCD** → Install GitOps platform
+6. **ArgoCD Apps** → Deploy your applications
 
-#### Policies Implemented:
-- **`default-deny-all`** - Blocks all traffic by default (security-first approach)
-- **`allow-dns-and-system`** - Permits essential DNS and HTTPS communication
-- **`allow-microservices-communication`** - Enables inter-service communication for DukQa services
+## 🚀 Automatic Deployment
 
-#### Why Network Policies:
-- **Defense in Depth**: Complements AWS Security Groups
-- **Microsegmentation**: Isolates compromised workloads
-- **Compliance**: Meets security requirements for financial platforms
+The `Deploy Cluster Global Components` workflow automatically runs when:
+- ✅ Changes are made to files in this directory (`cluster-global-components/`)
+- ✅ Manual trigger via GitHub Actions "Run workflow" button
 
-### Namespace Security
-**Purpose**: Apply Pod Security Standards to enforce security baselines
+The workflow will **NOT** run for changes outside this directory, ensuring infrastructure changes are deployed only when needed.
 
-- **`kube-system`**: Privileged (for system components)
-- **`default`**: Baseline (for application workloads)
+## 🎯 Result
 
-## 📊 Monitoring Components
+After deployment, you'll have a **complete production-ready Kubernetes platform** with:
+- ✅ Security and RBAC configured
+- ✅ Secret management enabled
+- ✅ Resource monitoring active
+- ✅ GitOps platform ready
+- ✅ Isolated namespaces for B2B/B2C/BackOffice applications
 
-### Metrics Server
-**Purpose**: Collect resource usage metrics for autoscaling and capacity planning
+## 📝 Usage
 
-#### What It Provides:
-- **CPU/Memory metrics** for Horizontal Pod Autoscaler (HPA)
-- **Node resource usage** for Cluster Autoscaler decisions
-- **kubectl top** functionality for debugging
+To deploy or update global components:
 
-#### Why Essential:
-- **Autoscaling**: HPA requires metrics to scale pods
-- **Cost Optimization**: Right-sizing based on actual usage
-- **Performance**: Identify resource bottlenecks
+1. **Make changes** to files in this directory
+2. **Commit and push** to main branch
+3. **GitHub Actions** will automatically deploy the changes
+4. **Monitor** the workflow in the Actions tab
 
-## 🔒 Storage & Secrets
+## 🔧 Manual Deployment
 
-### Secrets Store CSI Driver
-**Purpose**: Securely inject AWS Secrets Manager secrets into pods as mounted volumes
+If needed, you can also deploy manually:
 
-#### Components:
-- **CSI Driver**: Kubernetes interface for secret mounting
-- **AWS Provider**: Connects to AWS Secrets Manager
-- **IRSA Integration**: Uses IAM roles (no hardcoded credentials)
-
-#### Why CSI over Kubernetes Secrets:
-- **Security**: Secrets never stored in etcd
-- **Rotation**: Automatic secret rotation from AWS
-- **Audit**: AWS CloudTrail tracks secret access
-- **Compliance**: Meets enterprise security requirements
-
-## 🚀 Deployment Strategy
-
-### Deployment Order (Critical):
 ```bash
-# 1. Security Foundation
-kubectl apply -f security/namespaces.yaml
+# Deploy namespaces
+kubectl apply -f namespaces.yaml
+
+# Deploy RBAC
 kubectl apply -f rbac/
 
-# 2. Network Security
-kubectl apply -f security/network-policies.yaml
-
-# 3. Secret Management
+# Deploy storage components
 kubectl apply -f storage/
 
-# 4. Observability
+# Deploy monitoring
 kubectl apply -f monitoring/
+
+# Deploy ArgoCD LoadBalancer
+kubectl apply -f argocd-loadbalancer.yaml
 ```
 
-### Why This Order:
-1. **Namespaces first** - Establishes security boundaries
-2. **RBAC second** - Prevents unauthorized access during deployment
-3. **Network policies third** - Secures communication channels
-4. **Storage fourth** - Enables secure secret access
-5. **Monitoring last** - Observes the secured environment
+## 🌐 Accessing ArgoCD
 
-## 🔗 Integration Points
+After deployment, ArgoCD will be available via:
 
-### With Terraform Infrastructure:
-- **IRSA Roles**: Service accounts use IAM roles created by Terraform
-- **Network Security**: Kubernetes policies complement AWS Security Groups
-- **Secret Access**: CSI driver uses Terraform-created IAM roles
-- **Cluster Integration**: Components reference EKS cluster created by Terraform
+1. **LoadBalancer** (Production):
+   ```bash
+   kubectl get svc argocd-server-lb -n argocd
+   ```
 
-### With Application Workloads:
-- **RBAC**: Applications deploy using developer role permissions
-- **Secrets**: Applications mount secrets via CSI volumes
-- **Networking**: Applications communicate through allowed network policies
-- **Metrics**: Applications expose metrics consumed by metrics server
+2. **Port Forward** (Development):
+   ```bash
+   kubectl port-forward svc/argocd-server -n argocd 8080:443
+   ```
 
-## 🛡️ Security Benefits
-
-### Zero-Trust Architecture:
-- **Default Deny**: Nothing communicates unless explicitly allowed
-- **Least Privilege**: Users and services get minimum required permissions
-- **Secret Isolation**: Secrets never touch Kubernetes storage
-
-### Compliance Ready:
-- **Audit Trails**: All access logged via AWS CloudTrail and Kubernetes audit logs
-- **Encryption**: Secrets encrypted in transit and at rest
-- **Access Control**: Role-based permissions with group integration
-
-## 🔧 Operational Benefits
-
-### Developer Experience:
-- **Self-Service**: Developers can deploy without cluster admin access
-- **Debugging**: Metrics and logs accessible via kubectl
-- **Security**: Guardrails prevent accidental security issues
-
-### Platform Operations:
-- **Scalability**: Metrics enable automatic scaling decisions
-- **Security**: Network policies prevent lateral movement
-- **Reliability**: RBAC prevents accidental cluster modifications
-
-## 📋 Prerequisites
-
-Before deploying these components:
-1. **EKS Cluster** - Must be provisioned via Terraform
-2. **IRSA Setup** - OIDC provider and IAM roles must exist
-3. **kubectl Access** - Cluster admin permissions required for initial setup
-4. **AWS Secrets** - Secrets must exist in AWS Secrets Manager
-
-## 🚨 Important Notes
-
-- **Network Policies**: Require a CNI that supports NetworkPolicy (AWS VPC CNI does)
-- **Secrets Store CSI**: Requires IRSA roles with Secrets Manager permissions
-- **Metrics Server**: Required for HPA and VPA functionality
-- **RBAC**: Changes require cluster admin permissions
-
-These components form the security and operational foundation for the DukQa microservices platform, ensuring secure, scalable, and compliant operations.
-
-<!-- Pipeline trigger: Testing automated deployment of cluster global components -->
+3. **Get Admin Password**:
+   ```bash
+   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+   ```
