@@ -28,7 +28,7 @@ on:
         type: boolean
 
 env:
-  AWS_REGION: eu-west-1
+  AWS_REGION: ${{ secrets.AWS_REGION }}
   CLUSTER_NAME: duka-eks-cluster
 
 jobs:
@@ -48,9 +48,9 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
         role-session-name: GitHubActions-Infrastructure
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -96,9 +96,9 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
         role-session-name: GitHubActions-GlobalComponents
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3
@@ -149,9 +149,9 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
         role-session-name: GitHubActions-ArgoCD
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3

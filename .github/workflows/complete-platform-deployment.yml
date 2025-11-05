@@ -1,5 +1,9 @@
 name: Complete Platform Deployment
 
+permissions:
+  id-token: write
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -28,7 +32,7 @@ on:
         type: boolean
 
 env:
-  AWS_REGION: eu-west-1
+  AWS_REGION: ${{ secrets.AWS_REGION }}
   CLUSTER_NAME: duka-eks-cluster
 
 jobs:
@@ -45,9 +49,8 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -90,9 +93,8 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3
@@ -140,9 +142,8 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3
@@ -189,9 +190,8 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3
