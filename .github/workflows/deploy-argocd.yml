@@ -4,8 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'cluster-global-components/argocd-*.yaml'
-      - 'production-cluster/cluster-manifests/argocd/**'
+      - 'cluster-global-components/argocd/**'
   workflow_dispatch:
 
 env:
@@ -39,23 +38,13 @@ jobs:
       run: |
         aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
 
-    - name: Deploy ArgoCD Core
+    - name: Deploy ArgoCD
       run: |
-        echo "🎛️ Deploying ArgoCD core..."
-        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        echo "🚀 Deploying ArgoCD with EC2 node selectors..."
+        kubectl apply -f cluster-global-components/argocd/
         
         echo "⏳ Waiting for ArgoCD to be ready..."
         kubectl wait --for=condition=Available --timeout=300s deployment/argocd-server -n argocd || true
-
-    - name: Deploy ArgoCD NodePort
-      run: |
-        echo "🌐 Deploying ArgoCD NodePort..."
-        kubectl apply -f cluster-global-components/argocd-nodeport.yaml || echo "NodePort deployed"
-
-    - name: Deploy Production LoadBalancer
-      run: |
-        echo "🚀 Deploying production LoadBalancer..."
-        kubectl apply -f cluster-global-components/production-loadbalancer.yaml || echo "LoadBalancer deployed"
 
     - name: Deploy ArgoCD Applications
       run: |
