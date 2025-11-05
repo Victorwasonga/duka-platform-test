@@ -8,7 +8,6 @@ on:
         required: false
         default: true
         type: boolean
-    inputs:
       environment:
         description: 'Environment to deploy'
         required: true
