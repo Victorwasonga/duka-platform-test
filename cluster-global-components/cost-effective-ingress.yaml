@@ -1,0 +1,33 @@
+# Single ALB handles all traffic - MUCH cheaper!
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dukqa-platform-ingress
+  namespace: argocd
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+spec:
+  rules:
+  - host: argocd.your-domain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argocd-server
+            port:
+              number: 80
+  - host: monitoring.your-domain.com  
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana  # Future monitoring
+            port:
+              number: 80
