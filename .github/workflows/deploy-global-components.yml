@@ -2,11 +2,6 @@ name: Deploy Cluster Global Components
 
 on:
   push:
-    branches: [main, develop]
-    paths:
-      - 'cluster-global-components/**'
-      - '.github/workflows/deploy-global-components.yml'
-  pull_request:
     branches: [main]
     paths:
       - 'cluster-global-components/**'

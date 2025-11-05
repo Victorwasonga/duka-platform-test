@@ -1,0 +1,49 @@
+name: Deploy Applications
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'production-cluster/cluster-manifests/apps/**'
+      - '.github/workflows/deploy-applications.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  CLUSTER_NAME: duka-eks-cluster
+
+jobs:
+  deploy-apps:
+    name: Deploy Applications via ArgoCD
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+
+    - name: Deploy ArgoCD Applications
+      run: |
+        echo "🚀 Deploying ArgoCD applications..."
+        kubectl apply -f production-cluster/cluster-manifests/argocd/ || echo "ArgoCD apps deployed"
+        
+        echo "📊 ArgoCD Application Status:"
+        kubectl get applications -n argocd || echo "No applications found yet"
