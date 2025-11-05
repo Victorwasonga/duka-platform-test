@@ -42,13 +42,10 @@ jobs:
             frontend-service:
               - 'services/frontend-service/**'
 
-  build-and-deploy:
+  build-auth-service:
     needs: detect-changes
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [auth-service, payments-service, api-gateway, frontend-service]
-    if: needs.detect-changes.outputs[matrix.service] == 'true'
+    if: needs.detect-changes.outputs.auth-service == 'true'
     steps:
       - uses: actions/checkout@v4
       
@@ -63,19 +60,142 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          IMAGE_TAG="${{ matrix.service }}-${{ github.sha }}"
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG services/${{ matrix.service }}
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-latest
+          IMAGE_TAG="auth-service-${{ github.sha }}"
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG services/auth-service
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:auth-service-latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:auth-service-latest
 
       - name: Update deployment manifest
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          sed -i "s|$ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-.*|$ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-${{ github.sha }}|g" production-cluster/cluster-manifests/apps/${{ matrix.service }}/deployment.yaml
-          git add production-cluster/cluster-manifests/apps/${{ matrix.service }}/deployment.yaml
-          git commit -m "Update ${{ matrix.service }} image to ${{ github.sha }}"
+          sed -i "s|$ECR_REGISTRY/$ECR_REPOSITORY:auth-service-.*|$ECR_REGISTRY/$ECR_REPOSITORY:auth-service-${{ github.sha }}|g" production-cluster/cluster-manifests/apps/auth-service/deployment.yaml
+          git add production-cluster/cluster-manifests/apps/auth-service/deployment.yaml
+          git commit -m "Update auth-service image to ${{ github.sha }}"
+          git push
+
+      - name: Install ArgoCD CLI and sync
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/argocd
+          argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+          argocd app sync dukqa-microservices
+
+  build-payments-service:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.payments-service == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG="payments-service-${{ github.sha }}"
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG services/payments-service
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:payments-service-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:payments-service-latest
+
+      - name: Update deployment manifest
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          sed -i "s|$ECR_REGISTRY/$ECR_REPOSITORY:payments-service-.*|$ECR_REGISTRY/$ECR_REPOSITORY:payments-service-${{ github.sha }}|g" production-cluster/cluster-manifests/apps/payments-service/deployment.yaml
+          git add production-cluster/cluster-manifests/apps/payments-service/deployment.yaml
+          git commit -m "Update payments-service image to ${{ github.sha }}"
+          git push
+
+      - name: Install ArgoCD CLI and sync
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/argocd
+          argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+          argocd app sync dukqa-microservices
+
+  build-api-gateway:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.api-gateway == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG="api-gateway-${{ github.sha }}"
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG services/api-gateway
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:api-gateway-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:api-gateway-latest
+
+      - name: Update deployment manifest
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          sed -i "s|$ECR_REGISTRY/$ECR_REPOSITORY:api-gateway-.*|$ECR_REGISTRY/$ECR_REPOSITORY:api-gateway-${{ github.sha }}|g" production-cluster/cluster-manifests/apps/api-gateway/deployment.yaml
+          git add production-cluster/cluster-manifests/apps/api-gateway/deployment.yaml
+          git commit -m "Update api-gateway image to ${{ github.sha }}"
+          git push
+
+      - name: Install ArgoCD CLI and sync
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/argocd
+          argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+          argocd app sync dukqa-microservices
+
+  build-frontend-service:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.frontend-service == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG="frontend-service-${{ github.sha }}"
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG services/frontend-service
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:frontend-service-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:frontend-service-latest
+
+      - name: Update deployment manifest
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          sed -i "s|$ECR_REGISTRY/$ECR_REPOSITORY:frontend-service-.*|$ECR_REGISTRY/$ECR_REPOSITORY:frontend-service-${{ github.sha }}|g" production-cluster/cluster-manifests/apps/frontend-service/deployment.yaml
+          git add production-cluster/cluster-manifests/apps/frontend-service/deployment.yaml
+          git commit -m "Update frontend-service image to ${{ github.sha }}"
           git push
 
       - name: Install ArgoCD CLI and sync
