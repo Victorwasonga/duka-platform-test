@@ -44,7 +44,7 @@ jobs:
         echo "🔍 Validating YAML syntax..."
         find cluster-global-components -name "*.yaml" -o -name "*.yml" | while read file; do
           echo "Validating $file"
-          python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
+          python3 -c "import yaml; list(yaml.safe_load_all(open('$file')))" || exit 1
         done
 
     - name: Check for required namespaces
