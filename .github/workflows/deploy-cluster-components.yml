@@ -81,7 +81,7 @@ jobs:
 
     - name: Deploy Namespaces
       run: |
-        kubectl apply -f DukQa-EKS-Project/cluster-global-components/security/namespaces.yaml
+        kubectl apply -f cluster-global-components/namespaces.yaml
 
     - name: Deploy RBAC Components
       run: |

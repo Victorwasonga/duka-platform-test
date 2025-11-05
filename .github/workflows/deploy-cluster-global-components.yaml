@@ -60,7 +60,7 @@ jobs:
         run: |
           echo "🏗️ Creating namespaces..."
           kubectl apply -f production-cluster/cluster-manifests/global/namespaces.yaml
-          kubectl apply -f cluster-global-components/security/namespaces.yaml
+          kubectl apply -f cluster-global-components/namespaces.yaml
           echo "✅ Namespaces created"
 
       - name: 🔐 Deploy RBAC & Security

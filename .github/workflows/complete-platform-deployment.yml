@@ -111,7 +111,7 @@ jobs:
         
         # 1. Namespaces first
         echo "1️⃣ Deploying namespaces..."
-        kubectl apply -f cluster-global-components/security/namespaces.yaml
+        kubectl apply -f cluster-global-components/namespaces.yaml
         
         # 2. RBAC second
         echo "2️⃣ Deploying RBAC..."

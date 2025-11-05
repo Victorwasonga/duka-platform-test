@@ -47,10 +47,10 @@ jobs:
     - name: Check for required namespaces
       run: |
         echo "🔍 Checking required namespaces exist..."
-        required_namespaces=("dukqa-apps" "argocd" "monitoring" "ingress")
+        required_namespaces=("argocd" "monitoring" "ingress" "b2b-fargate" "b2c-fargate" "backoffice-fargate")
         
         for ns in "${required_namespaces[@]}"; do
-          if ! grep -r "name: $ns" cluster-global-components/security/namespaces.yaml; then
+          if ! grep -r "name: $ns" cluster-global-components/namespaces.yaml; then
             echo "❌ Required namespace '$ns' not found in namespaces.yaml"
             exit 1
           fi
