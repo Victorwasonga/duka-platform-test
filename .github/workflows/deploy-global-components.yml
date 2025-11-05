@@ -86,10 +86,6 @@ jobs:
       with:
         version: 'v1.28.0'
 
-    - name: Update kubeconfig
-      run: |
-        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
-
     - name: Check if cluster exists
       id: cluster-check
       run: |
@@ -102,12 +98,32 @@ jobs:
           echo "❌ Cluster does not exist - skipping deployment"
         fi
 
-    - name: Verify cluster connectivity
+    - name: Configure kubectl context
       if: steps.cluster-check.outputs.cluster-exists == 'true'
       run: |
-        echo "🔍 Verifying cluster connectivity..."
+        echo "🔧 Configuring kubectl context for EKS cluster..."
+        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+        
+        echo "📋 Current kubectl context:"
+        kubectl config current-context
+        
+        echo "🔍 Cluster info:"
+        kubectl config view --minify
+
+    - name: Verify cluster connectivity and authentication
+      if: steps.cluster-check.outputs.cluster-exists == 'true'
+      run: |
+        echo "🔍 Testing cluster connectivity..."
         kubectl cluster-info
+        
+        echo "🔍 Testing authentication..."
+        kubectl auth can-i get pods --all-namespaces
+        
+        echo "📊 Cluster nodes:"
         kubectl get nodes
+        
+        echo "📊 Current namespaces:"
+        kubectl get namespaces
 
     - name: Deploy Namespaces
       if: steps.cluster-check.outputs.cluster-exists == 'true'
