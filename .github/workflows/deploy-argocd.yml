@@ -53,3 +53,4 @@ jobs:
         
         echo "✅ ArgoCD deployment completed!"
         kubectl get pods -n argocd
+        kubectl get svc -n argocd
