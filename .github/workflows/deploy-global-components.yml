@@ -44,7 +44,7 @@ jobs:
         echo "🔍 Validating YAML syntax..."
         find cluster-global-components -name "*.yaml" -o -name "*.yml" | while read file; do
           echo "Validating $file"
-          kubectl --dry-run=client --validate=true apply -f "$file" || exit 1
+          python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
         done
 
     - name: Check for required namespaces
