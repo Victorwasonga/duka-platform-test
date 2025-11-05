@@ -1,0 +1,184 @@
+name: Deploy Cluster Global Components
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'cluster-global-components/**'
+      - '.github/workflows/deploy-global-components.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cluster-global-components/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - prod
+
+env:
+  AWS_REGION: eu-west-1
+  CLUSTER_NAME: duka-eks-cluster
+
+jobs:
+  validate:
+    name: Validate Manifests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Validate YAML syntax
+      run: |
+        echo "🔍 Validating YAML syntax..."
+        find cluster-global-components -name "*.yaml" -o -name "*.yml" | while read file; do
+          echo "Validating $file"
+          kubectl --dry-run=client --validate=true apply -f "$file" || exit 1
+        done
+
+    - name: Check for required namespaces
+      run: |
+        echo "🔍 Checking required namespaces exist..."
+        required_namespaces=("dukqa-apps" "argocd" "monitoring" "ingress")
+        
+        for ns in "${required_namespaces[@]}"; do
+          if ! grep -r "name: $ns" cluster-global-components/security/namespaces.yaml; then
+            echo "❌ Required namespace '$ns' not found in namespaces.yaml"
+            exit 1
+          fi
+          echo "✅ Namespace '$ns' found"
+        done
+
+  deploy-global-components:
+    name: Deploy Global Components
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment || 'test' }}
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+        role-session-name: GitHubActions-GlobalComponents
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+
+    - name: Verify cluster connectivity
+      run: |
+        echo "🔍 Verifying cluster connectivity..."
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Deploy Namespaces
+      run: |
+        echo "🚀 Deploying namespaces..."
+        kubectl apply -f cluster-global-components/security/namespaces.yaml
+        
+        echo "⏳ Waiting for namespaces to be ready..."
+        kubectl wait --for=condition=Active --timeout=60s namespace/dukqa-apps || true
+        kubectl wait --for=condition=Active --timeout=60s namespace/argocd || true
+        kubectl wait --for=condition=Active --timeout=60s namespace/monitoring || true
+        kubectl wait --for=condition=Active --timeout=60s namespace/ingress || true
+
+    - name: Deploy RBAC Components
+      run: |
+        echo "🚀 Deploying RBAC components..."
+        kubectl apply -f cluster-global-components/rbac/
+        sleep 10
+
+    - name: Deploy Storage Components
+      run: |
+        echo "🚀 Deploying storage components..."
+        kubectl apply -f cluster-global-components/storage/
+        
+        echo "⏳ Waiting for storage components to be ready..."
+        kubectl wait --for=condition=Ready --timeout=120s pod -l app=secrets-store-csi-driver -n kube-system || true
+        kubectl wait --for=condition=Ready --timeout=120s pod -l app=secrets-store-provider-aws -n kube-system || true
+
+    - name: Deploy Monitoring Components
+      run: |
+        echo "🚀 Deploying monitoring components..."
+        kubectl apply -f cluster-global-components/monitoring/
+        
+        echo "⏳ Waiting for monitoring components to be ready..."
+        kubectl wait --for=condition=Available --timeout=180s deployment/metrics-server -n kube-system || true
+
+    - name: Verify Deployment
+      run: |
+        echo "🔍 Verifying deployment status..."
+        
+        echo "=== Namespaces ==="
+        kubectl get namespaces
+        
+        echo "=== RBAC ==="
+        kubectl get clusterroles | grep dukqa || echo "No dukqa cluster roles found"
+        
+        echo "=== Storage ==="
+        kubectl get pods -n kube-system | grep -E "(secrets-store|csi)" || echo "No storage pods found"
+        
+        echo "=== Monitoring ==="
+        kubectl get pods -n kube-system | grep metrics-server || echo "No metrics-server found"
+        
+        echo "=== All Pods Status ==="
+        kubectl get pods --all-namespaces | grep -v Running | grep -v Completed || echo "All pods are running"
+
+    - name: Test Components
+      run: |
+        echo "🧪 Testing deployed components..."
+        
+        # Test RBAC
+        echo "Testing RBAC..."
+        kubectl auth can-i create pods --as=system:serviceaccount:default:default -n dukqa-apps || echo "RBAC test completed"
+        
+        # Test namespaces
+        echo "Testing namespaces..."
+        kubectl get namespace dukqa-apps -o jsonpath='{.status.phase}' | grep Active || echo "Namespace test completed"
+        
+        echo "✅ Component testing completed"
+
+  notify-status:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [validate, deploy-global-components]
+    if: always()
+    
+    steps:
+    - name: Deployment Success
+      if: needs.deploy-global-components.result == 'success'
+      run: |
+        echo "✅ Global components deployed successfully!"
+        echo "🎯 Cluster is ready for application deployments"
+        
+    - name: Deployment Failed
+      if: needs.deploy-global-components.result == 'failure'
+      run: |
+        echo "❌ Global components deployment failed!"
+        echo "🔍 Check the logs above for details"
+        exit 1

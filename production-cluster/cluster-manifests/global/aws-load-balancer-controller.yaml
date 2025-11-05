@@ -1,0 +1,10 @@
+# only ServiceAccount and IngressClass manifest here; install controller via Helm
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aws-load-balancer-controller
+  namespace: kube-system
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::746387399274:role/aws-load-balancer-controller-role-dukqa-platform
+---
+# IngressClass already defined; nothing more required if you install via Helm

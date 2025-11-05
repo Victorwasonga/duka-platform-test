@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: image-build-push-workflow
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: image-build-push
+    app.kubernetes.io/part-of: dukqa-platform
+data:
+  build-push.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    # Build and push Docker images to ECR
+    SERVICE_NAME=$1
+    BUILD_CONTEXT=$2
+    DOCKERFILE_PATH=${3:-Dockerfile}
+    
+    if [ -z "$SERVICE_NAME" ] || [ -z "$BUILD_CONTEXT" ]; then
+      echo "Usage: build-push.sh <service-name> <build-context> [dockerfile-path]"
+      exit 1
+    fi
+    
+    # Validate build context exists
+    if [ ! -d "$BUILD_CONTEXT" ]; then
+      echo "Error: Build context directory '$BUILD_CONTEXT' does not exist"
+      exit 1
+    fi
+    
+    # Validate Dockerfile exists
+    if [ ! -f "$BUILD_CONTEXT/$DOCKERFILE_PATH" ]; then
+      echo "Error: Dockerfile '$BUILD_CONTEXT/$DOCKERFILE_PATH' does not exist"
+      exit 1
+    fi
+    
+    # ECR Configuration
+    ECR_REGISTRY="746387399274.dkr.ecr.eu-west-1.amazonaws.com"
+    ECR_REPOSITORY="dukqa-platform"
+    IMAGE_TAG="${SERVICE_NAME}-$(git rev-parse --short HEAD)"
+    
+    # Login to ECR
+    aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+    
+    # Build image
+    docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f $DOCKERFILE_PATH $BUILD_CONTEXT
+    
+    # Tag as latest
+    docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:${SERVICE_NAME}-latest
+    
+    # Push images
+    docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    docker push $ECR_REGISTRY/$ECR_REPOSITORY:${SERVICE_NAME}-latest
+    
+    echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+    echo "Latest tag: $ECR_REGISTRY/$ECR_REPOSITORY:${SERVICE_NAME}-latest"
+  
+  build-all-services.sh: |
+    #!/bin/bash
+    # Build all microservices
+    
+    SERVICES=(
+      "auth-service"
+      "payments-service"
+      "shipment-service"
+      "delivery-service"
+      "insurance-service"
+      "customer-support-service"
+      "document-upload-service"
+      "kq-flight-cargo-service"
+      "kra-integration-service"
+      "notifications-service"
+      "api-gateway"
+      "frontend-service"
+    )
+    
+    for service in "${SERVICES[@]}"; do
+      echo "Building $service..."
+      ./build-push.sh $service ./services/$service
+    done
+    
+    echo "All services built and pushed successfully"

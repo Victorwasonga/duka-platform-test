@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: ec2-apps
+  labels:
+    app: auth-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      serviceAccountName: auth-service-sa
+      containers:
+        - name: auth
+          image: 746387399274.dkr.ecr.eu-west-1.amazonaws.com/dukqa-platform:auth-service-latest
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: auth-service-config
+                optional: false
+            - secretRef:
+                name: auth-service-secret
+                optional: false

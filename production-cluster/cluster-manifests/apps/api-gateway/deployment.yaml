@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: ec2-apps
+  labels:
+    app: api-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      serviceAccountName: api-gateway-sa
+      containers:
+        - name: api-gateway
+          image: 746387399274.dkr.ecr.eu-west-1.amazonaws.com/dukqa-platform:api-gateway-latest
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: api-gateway-config
+                optional: false
+            - secretRef:
+                name: api-gateway-secret
+                optional: false

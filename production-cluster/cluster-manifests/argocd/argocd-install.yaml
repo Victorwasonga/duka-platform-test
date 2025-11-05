@@ -1,0 +1,77 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd
+    app.kubernetes.io/part-of: dukqa-platform
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-cd
+    targetRevision: 5.51.6
+    helm:
+      values: |
+        global:
+          image:
+            tag: v2.9.3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            seccompProfile:
+              type: RuntimeDefault
+        server:
+          service:
+            type: ClusterIP
+          config:
+            url: https://argocd.dukqa-platform.com
+            oidc.config: |
+              name: AWS SSO
+              issuer: https://portal.sso.eu-west-1.amazonaws.com/saml/assertion/your-instance-id
+              clientId: your-client-id
+              clientSecret: $oidc.clientSecret
+              requestedScopes: ["openid", "profile", "email"]
+          ingress:
+            enabled: true
+            ingressClassName: alb
+            annotations:
+              alb.ingress.kubernetes.io/scheme: internet-facing
+              alb.ingress.kubernetes.io/target-type: ip
+              alb.ingress.kubernetes.io/ssl-redirect: '443'
+              alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-west-1:746387399274:certificate/your-cert-arn
+            hosts:
+              - argocd.dukqa-platform.com
+            tls:
+              - secretName: argocd-server-tls
+                hosts:
+                  - argocd.dukqa-platform.com
+        configs:
+          secret:
+            argocdServerAdminPassword: $2a$10$rRyBsGSHK6.uc8fntPwVIuLVHgsAhAX7TcdrqW/RADU0uh7CaChLa
+            oidc.clientSecret: your-oidc-client-secret
+          params:
+            server.insecure: false
+            server.grpc.web: true
+        redis:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+        controller:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+        repoServer:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

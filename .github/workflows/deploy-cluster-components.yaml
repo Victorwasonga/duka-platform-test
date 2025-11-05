@@ -1,0 +1,76 @@
+name: 🚀 Deploy Cluster Global Components
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'production-cluster/cluster-manifests/**'
+      - 'cluster-global-components/**'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  CLUSTER_NAME: duka-eks-cluster
+
+jobs:
+  deploy-components:
+    name: Deploy Global Components
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: 🧰 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::711387133889:role/GitHubActionsEKSAdmin
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 🔧 Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: 🎯 Configure kubectl for EKS
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+          kubectl cluster-info
+
+      - name: 📦 Deploy Namespaces
+        run: |
+          kubectl apply -f production-cluster/cluster-manifests/namespaces/
+
+      - name: 🔐 Deploy RBAC
+        run: |
+          kubectl apply -f production-cluster/cluster-manifests/rbac/
+
+      - name: 💾 Deploy Storage Classes
+        run: |
+          kubectl apply -f production-cluster/cluster-manifests/storage/
+
+      - name: 🌐 Deploy Network Policies
+        run: |
+          kubectl apply -f production-cluster/cluster-manifests/networking/
+
+      - name: 📊 Deploy Monitoring Stack
+        run: |
+          kubectl apply -f production-cluster/cluster-manifests/monitoring/
+
+      - name: 🔒 Deploy Security Components
+        run: |
+          kubectl apply -f production-cluster/cluster-manifests/security/
+
+      - name: 🎛️ Deploy ArgoCD
+        run: |
+          kubectl apply -f production-cluster/cluster-manifests/argocd/
+
+      - name: ✅ Verify Deployments
+        run: |
+          echo "🔍 Checking component status..."
+          kubectl get pods -A
+          kubectl get svc -A
+          echo "✅ All components deployed successfully!"

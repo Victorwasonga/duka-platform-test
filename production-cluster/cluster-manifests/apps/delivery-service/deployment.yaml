@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delivery-service
+  namespace: dukqa-apps
+  labels:
+    app: delivery-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: delivery-service
+  template:
+    metadata:
+      labels:
+        app: delivery-service
+    spec:
+      serviceAccountName: delivery-service-sa
+      containers:
+        - name: delivery-service
+          image: 746387399274.dkr.ecr.eu-west-1.amazonaws.com/delivery-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: delivery-service-config
+            - secretRef:
+                name: delivery-service-secret
+          env:
+            - name: AWS_REGION
+              value: "eu-west-1"
+            - name: INSTANCE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 8
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+      imagePullSecrets:
+        - name: ecr-registry
+      terminationGracePeriodSeconds: 60
+

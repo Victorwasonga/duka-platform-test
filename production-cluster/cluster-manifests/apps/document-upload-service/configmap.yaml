@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: document-upload-config
+  namespace: dukqa-apps
+  labels:
+    app: document-upload-service
+data:
+  APP_NAME: "document-upload-service"
+  LOG_LEVEL: "INFO"
+  MAX_FILE_SIZE_MB: "50"
+  STORAGE_BUCKET: "dukqa-uploads-prod"      # replace with your S3 bucket
+  REGION: "eu-west-1"
+  PORT: "8080"
+

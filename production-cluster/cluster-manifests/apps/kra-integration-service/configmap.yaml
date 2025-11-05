@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kra-integration-config
+  namespace: dukqa-apps
+data:
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+  KRA_BASE_URL: "https://api.kra.go.ke"
+

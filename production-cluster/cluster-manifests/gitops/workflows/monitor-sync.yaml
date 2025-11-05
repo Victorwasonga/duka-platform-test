@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitor-sync-workflow
+  namespace: argocd
+data:
+  monitor.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    # Login to ArgoCD
+    argocd login argocd-server.argocd.svc.cluster.local:443 \
+      --username admin \
+      --password "$ARGOCD_PASSWORD" \
+      --insecure
+    
+    # Monitor ArgoCD application sync status
+    check_app_health() {
+      local app_name=$1
+      local status=$(argocd app get $app_name -o json | jq -r '.status.health.status')
+      local sync=$(argocd app get $app_name -o json | jq -r '.status.sync.status')
+      
+      echo "App: $app_name | Health: $status | Sync: $sync"
+      
+      if [ "$status" != "Healthy" ] || [ "$sync" != "Synced" ]; then
+        return 1
+      fi
+      return 0
+    }
+    
+    # Applications to monitor
+    APPS=("dukqa-global" "dukqa-infra" "dukqa-microservices" "dukqa-ingress" "dukqa-monitoring")
+    
+    echo "Monitoring DukQa Platform Applications..."
+    echo "========================================"
+    
+    while true; do
+      all_healthy=true
+      
+      for app in "${APPS[@]}"; do
+        if ! check_app_health $app; then
+          all_healthy=false
+        fi
+      done
+      
+      if [ "$all_healthy" = true ]; then
+        echo "✅ All applications are healthy and synced"
+      else
+        echo "⚠️  Some applications need attention"
+      fi
+      
+      echo "========================================"
+      sleep 30
+    done
+  
+  health-check.sh: |
+    #!/bin/bash
+    # Quick health check for all applications
+    
+    argocd app list -o json | jq -r '.[] | select(.metadata.name | startswith("dukqa-")) | "\(.metadata.name): Health=\(.status.health.status), Sync=\(.status.sync.status)"'

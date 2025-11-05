@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: document-upload-init
+  namespace: dukqa-apps
+  labels:
+    app: document-upload-service
+spec:
+  template:
+    metadata:
+      name: document-upload-init
+    spec:
+      serviceAccountName: document-upload-sa
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: 746387399274.dkr.ecr.eu-west-1.amazonaws.com/document-upload-service:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Preparing storage..."
+              /app/scripts/init_storage.sh || { echo "Init failed"; exit 1; }
+

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: delivery-service-config
+  namespace: dukqa-apps
+  labels:
+    app: delivery-service
+data:
+  APP_NAME: "delivery-service"
+  LOG_LEVEL: "INFO"
+  DEFAULT_REGION: "eu-west-1"
+  MAX_RETRY: "3"
+  DB_HOST: "postgres.dukwa-db.svc.cluster.local"
+  DB_NAME: "deliverydb"
+  PORT: "8080"
+

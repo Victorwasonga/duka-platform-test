@@ -1,0 +1,12 @@
+# minimal clusterrole used for global components (extend as needed)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: global-management
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "pods", "services", "endpoints", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]

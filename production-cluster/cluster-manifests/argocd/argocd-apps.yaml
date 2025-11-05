@@ -1,0 +1,103 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dukqa-microservices
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: dukqa-microservices
+    app.kubernetes.io/part-of: dukqa-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: dukqa-platform
+  source:
+    repoURL: https://github.com/dukqa-org/dukqa-platform
+    targetRevision: HEAD
+    path: production-cluster/cluster-manifests/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dukqa-apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dukqa-ingress
+  namespace: argocd
+spec:
+  project: dukqa-platform
+  source:
+    repoURL: https://github.com/dukqa-org/dukqa-platform
+    targetRevision: HEAD
+    path: production-cluster/cluster-manifests/ingress
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dukqa-global
+  namespace: argocd
+spec:
+  project: dukqa-platform
+  source:
+    repoURL: https://github.com/dukqa-org/dukqa-platform
+    targetRevision: HEAD
+    path: production-cluster/cluster-manifests/global
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dukqa-infra
+  namespace: argocd
+spec:
+  project: dukqa-platform
+  source:
+    repoURL: https://github.com/dukqa-org/dukqa-platform
+    targetRevision: HEAD
+    path: production-cluster/cluster-manifests/infra
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dukqa-monitoring
+  namespace: argocd
+spec:
+  project: dukqa-platform
+  source:
+    repoURL: https://github.com/dukqa-org/dukqa-platform
+    targetRevision: HEAD
+    path: production-cluster/cluster-manifests/monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: ec2-apps
+data:
+  NODE_ENV: "production"
+  PORT: "8080"
+  AUTH_SERVICE_URL: "http://auth-service.ec2-apps.svc.cluster.local"
+  PAYMENTS_SERVICE_URL: "http://payments-service.ec2-apps.svc.cluster.local"
+  SHIPMENT_SERVICE_URL: "http://shipment-service.ec2-apps.svc.cluster.local"
+  DELIVERY_SERVICE_URL: "http://delivery-service.ec2-apps.svc.cluster.local"
+  INSURANCE_SERVICE_URL: "http://insurance-service.ec2-apps.svc.cluster.local"
+  RABBITMQ_URL: "amqp://rabbitmq.ec2-apps.svc.cluster.local:5672"

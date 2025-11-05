@@ -1,0 +1,84 @@
+name: DukQa Microservices CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'production-cluster/cluster-manifests/apps/**'
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REGISTRY: 746387399274.dkr.ecr.eu-west-1.amazonaws.com
+  ECR_REPOSITORY: dukqa-platform
+  ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+  ARGOCD_USERNAME: ${{ secrets.ARGOCD_USERNAME }}
+  ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      auth-service: ${{ steps.changes.outputs.auth-service }}
+      payments-service: ${{ steps.changes.outputs.payments-service }}
+      api-gateway: ${{ steps.changes.outputs.api-gateway }}
+      frontend-service: ${{ steps.changes.outputs.frontend-service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            auth-service:
+              - 'services/auth-service/**'
+            payments-service:
+              - 'services/payments-service/**'
+            api-gateway:
+              - 'services/api-gateway/**'
+            frontend-service:
+              - 'services/frontend-service/**'
+
+  build-and-deploy:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth-service, payments-service, api-gateway, frontend-service]
+    if: needs.detect-changes.outputs[matrix.service] == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG="${{ matrix.service }}-${{ github.sha }}"
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG services/${{ matrix.service }}
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-latest
+
+      - name: Update deployment manifest
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          sed -i "s|$ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-.*|$ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-${{ github.sha }}|g" production-cluster/cluster-manifests/apps/${{ matrix.service }}/deployment.yaml
+          git add production-cluster/cluster-manifests/apps/${{ matrix.service }}/deployment.yaml
+          git commit -m "Update ${{ matrix.service }} image to ${{ github.sha }}"
+          git push
+
+      - name: Install ArgoCD CLI and sync
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/argocd
+          argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+          argocd app sync dukqa-microservices

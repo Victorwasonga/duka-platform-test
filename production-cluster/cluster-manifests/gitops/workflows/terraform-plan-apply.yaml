@@ -1,0 +1,126 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: terraform-infrastructure
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: terraform-infrastructure
+    app.kubernetes.io/part-of: dukqa-platform
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: terraform-infrastructure
+        app.kubernetes.io/part-of: dukqa-platform
+    spec:
+      serviceAccountName: terraform-runner
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: terraform
+        image: hashicorp/terraform:1.6
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Initialize Terraform
+          cd /workspace/terraform
+          terraform init
+          
+          # Plan infrastructure changes
+          terraform plan -out=tfplan
+          
+          # Apply if auto-approve is set
+          if [ "$AUTO_APPLY" = "true" ]; then
+            terraform apply -auto-approve tfplan
+            echo "Infrastructure applied successfully"
+          else
+            echo "Terraform plan completed. Review and apply manually."
+          fi
+        env:
+        - name: AWS_REGION
+          value: "eu-west-1"
+        - name: AUTO_APPLY
+          value: "false"
+        - name: AWS_DEFAULT_REGION
+          value: "eu-west-1"
+        volumeMounts:
+        - name: terraform-config
+          mountPath: /workspace/terraform
+      volumes:
+      - name: terraform-config
+        configMap:
+          name: terraform-config
+      restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: terraform-config
+  namespace: argocd
+data:
+  main.tf: |
+    terraform {
+      required_providers {
+        aws = {
+          source  = "hashicorp/aws"
+          version = "~> 5.0"
+        }
+      }
+      backend "s3" {
+        bucket = "dukqa-terraform-state"
+        key    = "production/terraform.tfstate"
+        region = "eu-west-1"
+      }
+    }
+    
+    provider "aws" {
+      region = var.aws_region
+    }
+    
+    # EKS Cluster (if not already created)
+    module "eks" {
+      source = "./modules/eks"
+      
+      cluster_name    = "dukqa-production-cluster"
+      cluster_version = "1.28"
+      
+      vpc_id     = var.vpc_id
+      subnet_ids = var.subnet_ids
+      
+      node_groups = {
+        main = {
+          instance_types = ["t3.medium"]
+          min_size      = 2
+          max_size      = 10
+          desired_size  = 3
+        }
+      }
+    }
+  
+  variables.tf: |
+    variable "aws_region" {
+      description = "AWS region"
+      type        = string
+      default     = "eu-west-1"
+    }
+    
+    variable "vpc_id" {
+      description = "VPC ID for EKS cluster"
+      type        = string
+    }
+    
+    variable "subnet_ids" {
+      description = "Subnet IDs for EKS cluster"
+      type        = list(string)
+    }

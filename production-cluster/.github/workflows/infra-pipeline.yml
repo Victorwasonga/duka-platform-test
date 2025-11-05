@@ -1,0 +1,66 @@
+name: Infrastructure Pipeline - dukqa-platform
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'production-cluster/**'
+      - '.github/workflows/infra-pipeline.yml'
+
+jobs:
+  setup-oidc:
+    name: 🧩 Enable OIDC for EKS (if not already)
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: 🛠️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::746387399274:role/GitHubActionsEKSAdmin
+          aws-region: eu-west-1
+
+      - name: ▶️ Enable OIDC Provider
+        run: |
+          chmod +x production-cluster/terraform/scripts/enable-oidc.sh
+          ./production-cluster/terraform/scripts/enable-oidc.sh
+
+  terraform:
+    name: 🏗️ Terraform Plan & Apply
+    runs-on: ubuntu-latest
+    needs: setup-oidc
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: 🛠️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::746387399274:role/GitHubActionsEKSAdmin
+          aws-region: eu-west-1
+
+      - name: 🧩 Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: 🧹 Initialize Terraform
+        working-directory: production-cluster/terraform
+        run: terraform init -input=false
+
+      - name: 🔍 Terraform Plan
+        working-directory: production-cluster/terraform
+        run: terraform plan -input=false -out=tfplan
+
+      - name: 🚀 Terraform Apply
+        working-directory: production-cluster/terraform
+        run: terraform apply -auto-approve tfplan

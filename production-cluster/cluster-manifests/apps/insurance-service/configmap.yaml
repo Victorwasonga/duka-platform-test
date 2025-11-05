@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: insurance-config
+  namespace: dukqa-apps
+data:
+  INSURANCE_API_URL: "https://api.dukqa.com/insurance"
+  POLICY_CACHE_TTL: "3600"
+  LOG_LEVEL: "INFO"
+

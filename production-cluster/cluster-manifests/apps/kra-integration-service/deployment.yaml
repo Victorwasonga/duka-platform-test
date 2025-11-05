@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kra-integration-deployment
+  namespace: dukqa-apps
+  labels:
+    app: kra-integration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kra-integration-service
+  template:
+    metadata:
+      labels:
+        app: kra-integration-service
+    spec:
+      serviceAccountName: kra-integration-sa
+      initContainers:
+        - name: db-init-check
+          image: busybox
+          command: ['sh', '-c', 'until nc -z postgres-service 5432; do echo waiting for db; sleep 3; done;']
+      containers:
+        - name: kra-integration
+          image: 746387399274.dkr.ecr.us-east-1.amazonaws.com/kra-integration-service:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: kra-integration-config
+            - secretRef:
+                name: kra-integration-secret
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 20
+

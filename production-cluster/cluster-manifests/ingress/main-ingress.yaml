@@ -1,0 +1,107 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dukqa-platform-ingress
+  namespace: ec2-apps
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+spec:
+  rules:
+    - host: api.dukqa-platform.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+          - path: /app
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+          - path: /rabbitmq
+            pathType: Prefix
+            backend:
+              service:
+                name: rabbitmq
+                port:
+                  number: 15672
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 80
+          - path: /payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payments-service
+                port:
+                  number: 80
+          - path: /support
+            pathType: Prefix
+            backend:
+              service:
+                name: customer-support-service
+                port:
+                  number: 80
+          - path: /delivery
+            pathType: Prefix
+            backend:
+              service:
+                name: delivery-service
+                port:
+                  number: 80
+          - path: /documents
+            pathType: Prefix
+            backend:
+              service:
+                name: document-upload-service
+                port:
+                  number: 80
+          - path: /insurance
+            pathType: Prefix
+            backend:
+              service:
+                name: insurance-service
+                port:
+                  number: 80
+          - path: /cargo
+            pathType: Prefix
+            backend:
+              service:
+                name: kq-flight-cargo-service
+                port:
+                  number: 80
+          - path: /notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notifications-service
+                port:
+                  number: 80
+          - path: /kra
+            pathType: Prefix
+            backend:
+              service:
+                name: kra-integration-service
+                port:
+                  number: 80
+          - path: /shipment
+            pathType: Prefix
+            backend:
+              service:
+                name: shipment-service
+                port:
+                  number: 80

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-support-service
+  namespace: dukqa-apps
+  labels:
+    app: customer-support-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: customer-support-service
+  template:
+    metadata:
+      labels:
+        app: customer-support-service
+    spec:
+      serviceAccountName: customer-support-sa
+      containers:
+        - name: customer-support
+          image: 746387399274.dkr.ecr.eu-west-1.amazonaws.com/customer-support-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: customer-support-config
+            - secretRef:
+                name: customer-support-secret
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 20
+

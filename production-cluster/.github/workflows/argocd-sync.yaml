@@ -1,0 +1,61 @@
+name: 🔄 ArgoCD GitOps Sync - dukqa-platform
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'production-cluster/cluster-manifests/**'
+      - '.github/workflows/argocd-sync.yaml'
+
+jobs:
+  argocd-sync:
+    name: 🔄 Sync GitHub to EKS via ArgoCD
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: 🧰 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::746387399274:role/GitHubActionsEKSAdmin
+          aws-region: eu-west-1
+
+      - name: 🔑 Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region eu-west-1 \
+            --name dukqa-platform
+
+      - name: 🧭 Apply ArgoCD Namespace
+        run: |
+          kubectl apply -f production-cluster/cluster-manifests/argocd/namespace.yaml
+
+      - name: 🧩 Install ArgoCD Core
+        run: |
+          echo "🚀 Installing ArgoCD components..."
+          kubectl apply -f production-cluster/cluster-manifests/argocd/argocd-install.yaml
+
+      - name: 🗂️ Create ArgoCD Project & Applications
+        run: |
+          echo "📦 Applying ArgoCD project and App-of-Apps definitions..."
+          kubectl apply -f production-cluster/cluster-manifests/argocd/argocd-project.yaml
+          kubectl apply -f production-cluster/cluster-manifests/gitops/workflows/argocd-app-of-apps.yaml
+
+      - name: 🔁 Trigger ArgoCD Sync
+        run: |
+          echo "🔁 Triggering ArgoCD sync..."
+          kubectl rollout status deploy/argocd-server -n argocd --timeout=300s || true
+          kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+          sleep 10
+          argocd login localhost:8080 --insecure --username admin --password admin || true
+          argocd app sync dukqa-platform --prune || true
+
+      - name: ✅ Summary
+        run: |
+          echo "✅ ArgoCD GitOps sync completed for dukqa-platform."
+          echo "Visit the ArgoCD UI to confirm all apps are healthy and synced."

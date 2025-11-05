@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shipment-config
+  namespace: dukqa-apps
+data:
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+  SHIPMENT_PROVIDER_URL: "https://api.shipmentgateway.com"
+  RETRY_LIMIT: "3"
+

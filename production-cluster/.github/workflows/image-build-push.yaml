@@ -1,0 +1,40 @@
+name: 🐳 Build & Push Images - dukqa-platform
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'production-cluster/**'
+      - '.github/workflows/image-build-push.yaml'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: 🛠️ Checkout repo
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::746387399274:role/GitHubActionsEKSAdmin
+          aws-region: eu-west-1
+
+      - name: 🐳 Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: 🧱 Build and Push Microservice Images
+        run: |
+          ECR_URL=${{ steps.login-ecr.outputs.registry }}/dukqa-platform
+          SERVICES=("auth-service" "payments-service" "shipment-service" "delivery-service" "notifications-service" "document-upload-service" "insurance-service" "kra-integration-service" "customer-support-service" "kq-flight-cargo-service")
+
+          for SERVICE in "${SERVICES[@]}"; do
+            echo "🚀 Building and pushing image for $SERVICE"
+            docker build -t $ECR_URL:${SERVICE}-latest ./production-cluster/cluster-manifests/apps/${SERVICE}
+            docker push $ECR_URL:${SERVICE}-latest
+          done

@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-components
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: cluster-components
+    app.kubernetes.io/part-of: dukqa-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Victorwasonga/dukqa-platform
+    targetRevision: HEAD
+    path: production-cluster/cluster-manifests
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true

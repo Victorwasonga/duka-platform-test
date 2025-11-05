@@ -1,0 +1,11 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  serviceAccountName: prometheus
+  replicas: 2
+  serviceMonitorSelector: {}
+
+# prometheus.yaml (very small; recommended to install via kube-prometheus-stack Helm)

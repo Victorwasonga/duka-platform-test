@@ -1,0 +1,113 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: deploy-dukqa-services
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: deploy-dukqa-services
+    app.kubernetes.io/part-of: dukqa-platform
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: deploy-dukqa-services
+        app.kubernetes.io/part-of: dukqa-platform
+    spec:
+      serviceAccountName: argocd-server
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+      containers:
+      - name: deploy
+        image: argoproj/argocd:v2.9.3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 999
+          capabilities:
+            drop:
+            - ALL
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -euo pipefail
+          
+          # Login to ArgoCD
+          argocd login argocd-server.argocd.svc.cluster.local:443 \
+            --username admin \
+            --password "$ARGOCD_PASSWORD" \
+            --insecure
+          
+          echo "Logged in to ArgoCD successfully"
+          
+          # Deploy microservices
+          argocd app create dukqa-microservices \
+            --repo https://github.com/your-org/dukqa-platform \
+            --path production-cluster/cluster-manifests/apps \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace ec2-apps \
+            --project dukqa-platform \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal
+          
+          # Deploy ingress
+          argocd app create dukqa-ingress \
+            --repo https://github.com/your-org/dukqa-platform \
+            --path production-cluster/cluster-manifests/ingress \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace ec2-apps \
+            --project dukqa-platform \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal
+          
+          # Deploy global resources
+          argocd app create dukqa-global \
+            --repo https://github.com/your-org/dukqa-platform \
+            --path production-cluster/cluster-manifests/global \
+            --dest-server https://kubernetes.default.svc \
+            --project dukqa-platform \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal
+          
+          # Deploy infrastructure
+          argocd app create dukqa-infra \
+            --repo https://github.com/your-org/dukqa-platform \
+            --path production-cluster/cluster-manifests/infra \
+            --dest-server https://kubernetes.default.svc \
+            --project dukqa-platform \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal
+          
+          # Deploy monitoring
+          argocd app create dukqa-monitoring \
+            --repo https://github.com/your-org/dukqa-platform \
+            --path production-cluster/cluster-manifests/monitoring \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace monitoring \
+            --project dukqa-platform \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal
+          
+          # Sync all applications
+          argocd app sync dukqa-global
+          argocd app sync dukqa-infra
+          argocd app sync dukqa-microservices
+          argocd app sync dukqa-ingress
+          argocd app sync dukqa-monitoring
+          
+          echo "Deployment completed successfully"
+        env:
+        - name: ARGOCD_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: argocd-initial-admin-secret
+              key: password
+      restartPolicy: OnFailure

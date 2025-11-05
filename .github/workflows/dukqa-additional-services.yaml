@@ -1,0 +1,99 @@
+name: DukQa Additional Services CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REGISTRY: 746387399274.dkr.ecr.eu-west-1.amazonaws.com
+  ECR_REPOSITORY: dukqa-platform
+  ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+  ARGOCD_USERNAME: ${{ secrets.ARGOCD_USERNAME }}
+  ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      shipment-service: ${{ steps.changes.outputs.shipment-service }}
+      delivery-service: ${{ steps.changes.outputs.delivery-service }}
+      insurance-service: ${{ steps.changes.outputs.insurance-service }}
+      customer-support-service: ${{ steps.changes.outputs.customer-support-service }}
+      document-upload-service: ${{ steps.changes.outputs.document-upload-service }}
+      kq-flight-cargo-service: ${{ steps.changes.outputs.kq-flight-cargo-service }}
+      kra-integration-service: ${{ steps.changes.outputs.kra-integration-service }}
+      notifications-service: ${{ steps.changes.outputs.notifications-service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            shipment-service:
+              - 'services/shipment-service/**'
+            delivery-service:
+              - 'services/delivery-service/**'
+            insurance-service:
+              - 'services/insurance-service/**'
+            customer-support-service:
+              - 'services/customer-support-service/**'
+            document-upload-service:
+              - 'services/document-upload-service/**'
+            kq-flight-cargo-service:
+              - 'services/kq-flight-cargo-service/**'
+            kra-integration-service:
+              - 'services/kra-integration-service/**'
+            notifications-service:
+              - 'services/notifications-service/**'
+
+  build-and-deploy:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [shipment-service, delivery-service, insurance-service, customer-support-service, document-upload-service, kq-flight-cargo-service, kra-integration-service, notifications-service]
+    if: needs.detect-changes.outputs[matrix.service] == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG="${{ matrix.service }}-${{ github.sha }}"
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG services/${{ matrix.service }}
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-latest
+
+      - name: Update deployment manifest
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git pull origin main
+          sed -i "s|$ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-.*|$ECR_REGISTRY/$ECR_REPOSITORY:${{ matrix.service }}-${{ github.sha }}|g" production-cluster/cluster-manifests/apps/${{ matrix.service }}/deployment.yaml
+          git add production-cluster/cluster-manifests/apps/${{ matrix.service }}/deployment.yaml
+          git commit -m "Update ${{ matrix.service }} image to ${{ github.sha }}"
+          git push
+
+      - name: Sync ArgoCD application
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/argocd
+          argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+          argocd app sync dukqa-microservices

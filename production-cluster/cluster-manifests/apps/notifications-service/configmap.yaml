@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notifications-config
+  namespace: dukqa-apps
+data:
+  NOTIFICATION_PROVIDER: "sns"
+  RETRY_INTERVAL: "5s"
+  LOG_LEVEL: "INFO"
+

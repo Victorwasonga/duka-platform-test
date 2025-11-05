@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: customer-support-config
+  namespace: dukqa-apps
+  labels:
+    app: customer-support-service
+data:
+  APP_NAME: "customer-support-service"
+  LOG_LEVEL: "INFO"
+  SUPPORT_EMAIL: "support@dukqa-platform.com"
+  DATABASE_HOST: "postgres.dukwa-db.svc.cluster.local"
+  DATABASE_NAME: "supportdb"
+  PORT: "8080"
+
