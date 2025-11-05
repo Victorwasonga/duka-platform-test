@@ -1,11 +1,13 @@
 name: Deploy Cluster Global Components
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'cluster-global-components/**'
   workflow_dispatch:
+    inputs:
+      deploy_all:
+        description: 'Deploy all global components'
+        required: false
+        default: true
+        type: boolean
     inputs:
       environment:
         description: 'Environment to deploy'
@@ -56,11 +58,9 @@ jobs:
         done
 
   deploy-global-components:
-    name: Deploy Global Components
+    name: Deploy All Global Components
     runs-on: ubuntu-latest
     needs: validate
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    environment: ${{ github.event.inputs.environment || 'test' }}
     permissions:
       id-token: write
       contents: read
@@ -168,6 +168,12 @@ jobs:
         
         echo "🚀 Deploying ArgoCD applications..."
         kubectl apply -f production-cluster/cluster-manifests/argocd/ || echo "ArgoCD apps will be deployed later"
+        
+        echo "🌐 Deploying production LoadBalancer..."
+        kubectl apply -f cluster-global-components/production-loadbalancer.yaml || echo "LoadBalancer deployed"
+        
+        echo "🎛️ Deploying ArgoCD NodePort..."
+        kubectl apply -f cluster-global-components/argocd-nodeport.yaml || echo "ArgoCD NodePort deployed"
 
     - name: Verify Deployment
       if: steps.cluster-check.outputs.cluster-exists == 'true'

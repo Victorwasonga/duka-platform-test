@@ -1,0 +1,47 @@
+name: Deploy Namespaces
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cluster-global-components/namespaces.yaml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  CLUSTER_NAME: duka-eks-cluster
+
+jobs:
+  deploy-namespaces:
+    name: Deploy Namespaces
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-dukqa-role
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+
+    - name: Deploy Namespaces
+      run: |
+        echo "🏷️ Deploying namespaces..."
+        kubectl apply -f cluster-global-components/namespaces.yaml
+        
+        echo "✅ Namespaces deployed successfully!"
+        kubectl get namespaces

@@ -3,6 +3,9 @@ kind: Service
 metadata:
   name: argocd-server-nodeport
   namespace: argocd
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: argocd-server
 spec:
   type: NodePort
   ports:
@@ -11,5 +14,10 @@ spec:
     protocol: TCP
     targetPort: 8080
     nodePort: 30080  # Access via http://NODE-IP:30080
+  - name: grpc
+    port: 443
+    protocol: TCP
+    targetPort: 8080
+    nodePort: 30443  # Access via https://NODE-IP:30443
   selector:
     app.kubernetes.io/name: argocd-server
