@@ -129,10 +129,9 @@ jobs:
       if: steps.cluster-check.outputs.cluster-exists == 'true'
       run: |
         echo "🚀 Deploying namespaces..."
-        kubectl apply -f cluster-global-components/security/namespaces.yaml
+        kubectl apply -f cluster-global-components/namespaces.yaml
         
         echo "⏳ Waiting for namespaces to be ready..."
-        kubectl wait --for=condition=Active --timeout=60s namespace/dukqa-apps || true
         kubectl wait --for=condition=Active --timeout=60s namespace/argocd || true
         kubectl wait --for=condition=Active --timeout=60s namespace/monitoring || true
         kubectl wait --for=condition=Active --timeout=60s namespace/ingress || true
@@ -162,6 +161,18 @@ jobs:
         
         echo "⏳ Waiting for monitoring components to be ready..."
         kubectl wait --for=condition=Available --timeout=180s deployment/metrics-server -n kube-system || true
+
+    - name: Deploy ArgoCD
+      if: steps.cluster-check.outputs.cluster-exists == 'true'
+      run: |
+        echo "🚀 Deploying ArgoCD..."
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        
+        echo "⏳ Waiting for ArgoCD to be ready..."
+        kubectl wait --for=condition=Available --timeout=300s deployment/argocd-server -n argocd || true
+        
+        echo "🚀 Deploying ArgoCD applications..."
+        kubectl apply -f production-cluster/cluster-manifests/argocd/ || echo "ArgoCD apps will be deployed later"
 
     - name: Verify Deployment
       if: steps.cluster-check.outputs.cluster-exists == 'true'
