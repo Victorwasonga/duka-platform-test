@@ -1,0 +1,28 @@
+# ArgoCD Server Configuration for Ingress
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cmd-params-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Enable insecure mode for ALB termination
+  server.insecure: "true"
+  # Set base href for proper routing
+  server.basehref: /
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Set the URL for ArgoCD
+  url: https://argocd.yourdomain.com
+  # Enable gRPC-Web for UI
+  grpc.web: "true"
