@@ -103,9 +103,9 @@ data:
 
 ## Verification
 After adding the role to aws-auth, GitHub Actions workflows should successfully:
-- ✅ Connect to EKS cluster
-- ✅ Run kubectl commands
-- ✅ Deploy cluster components
+-  Connect to EKS cluster
+-  Run kubectl commands
+-  Deploy cluster components
 
 ## Important Notes
 - The GitHub Actions role gets `system:masters` permissions (full cluster admin)

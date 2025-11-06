@@ -205,13 +205,13 @@ git push origin main
 
 ## Best Practices
 
-### ✅ Do:
+###  Do:
 - **Keep manifests in Git** - Never apply directly with kubectl
 - **Use branches** for testing changes before merging to main
 - **Monitor sync status** - Set up alerts for failed syncs
 - **Regular backups** - Backup ArgoCD configuration
 
-### ❌ Don't:
+###  Don't:
 - **Manual kubectl apply** - Breaks GitOps workflow
 - **Secrets in Git** - Use external secret management
 - **Direct cluster access** - Use ArgoCD for all deployments

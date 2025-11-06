@@ -91,13 +91,13 @@ kubectl apply -f app-deployment.yaml
 
 ## Security Best Practices
 
-✅ **Do:**
+ **Do:**
 - Use service accounts for applications
 - Regularly review role bindings
 - Follow principle of least privilege
 - Use namespaces for additional isolation
 
-❌ **Don't:**
+ **Don't:**
 - Give admin access to everyone
 - Use the default service account
 - Hardcode credentials in applications

@@ -2,7 +2,7 @@
 
 This directory contains GitOps workflows and automation for managing the DukQa platform deployment lifecycle. It implements a complete GitOps strategy using ArgoCD and Kubernetes-native workflows.
 
-## 🏗️ GitOps Architecture
+## ️ GitOps Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -33,7 +33,7 @@ gitops/
 └── README.md                          # This documentation
 ```
 
-## 🔄 GitOps Workflow Components
+##  GitOps Workflow Components
 
 ### 1. App of Apps Pattern (`argocd-app-of-apps.yaml`)
 **Purpose**: Centralized management of all DukQa applications through a single root application
@@ -118,7 +118,7 @@ gitops/
 - **Plan Validation**: Review changes before applying
 - **IRSA Security**: No hardcoded AWS credentials
 
-## 🔐 Security Architecture
+##  Security Architecture
 
 ### GitOps Security Model
 **Principle**: Pull-based deployment with zero cluster credentials in CI/CD
@@ -143,7 +143,7 @@ gitops/
 - **Audit Trail**: AWS CloudTrail logs all service account actions
 - **Network Policies**: Restrict communication between components
 
-## 🚀 Deployment Strategy
+##  Deployment Strategy
 
 ### Initial Platform Setup
 ```bash
@@ -193,7 +193,7 @@ kubectl exec -n argocd deployment/argocd-server -- /scripts/build-all-services.s
 - **Alert Manager**: Notifications for deployment failures
 - **Jaeger Tracing**: Distributed tracing for deployment workflows
 
-## 🛡️ Compliance & Governance
+## ️ Compliance & Governance
 
 ### Audit Requirements
 - **Change Tracking**: All changes tracked in Git with author and timestamp
@@ -207,7 +207,7 @@ kubectl exec -n argocd deployment/argocd-server -- /scripts/build-all-services.s
 - **Network Segmentation**: Network policies isolate application traffic
 - **Encryption**: All data encrypted in transit and at rest
 
-## 📊 Operational Benefits
+##  Operational Benefits
 
 ### Developer Experience
 - **Self-Service**: Developers deploy by committing to Git

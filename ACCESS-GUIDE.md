@@ -1,6 +1,6 @@
 # Platform Access Guide
 
-## 🎛️ ArgoCD Access (NodePort)
+## ️ ArgoCD Access (NodePort)
 
 ### Get Node IP:
 ```bash
@@ -20,7 +20,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 - **Username**: `admin`
 - **Password**: (from command above)
 
-## 🌐 Production Applications (LoadBalancer)
+##  Production Applications (LoadBalancer)
 
 ### Get LoadBalancer URL:
 ```bash
@@ -31,7 +31,7 @@ kubectl get svc dukqa-platform-lb -n ingress
 - **HTTP**: `http://LOADBALANCER-DNS`
 - **HTTPS**: `https://LOADBALANCER-DNS`
 
-## 🔧 Verify Services:
+##  Verify Services:
 
 ```bash
 # Check ArgoCD NodePort
