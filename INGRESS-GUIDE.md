@@ -1,8 +1,8 @@
-# 🌐 DukQa Platform Ingress Guide
+# DukQa Platform Ingress Guide
 
 This guide explains the ingress configuration for DukQa Platform microservices and ArgoCD access.
 
-## 📁 Ingress Files Overview
+## Ingress Files Overview
 
 ### **1. ArgoCD Ingress**
 **File:** `cluster-global-components/argocd/argocd-ingress.yaml`
@@ -20,7 +20,7 @@ This guide explains the ingress configuration for DukQa Platform microservices a
 - **SSL:** ACM Certificate
 - **Target:** Multiple microservices
 
-## 🎯 DukQa Platform Microservices Routing
+## DukQa Platform Microservices Routing
 
 ### **API Services** (`api.duka-platform.com`)
 
@@ -44,7 +44,7 @@ This guide explains the ingress configuration for DukQa Platform microservices a
 |------|-------------|--------------|----------|
 | `/` | `frontend-service` | Fargate | Main web application UI |
 
-## 🏗️ Service Placement Strategy
+## Service Placement Strategy
 
 ### **EC2 Workers** (Performance & Compliance)
 - **`api-gateway`** - Central routing, high performance
@@ -62,7 +62,7 @@ This guide explains the ingress configuration for DukQa Platform microservices a
 - **`shipment-service`** - Auto-scaling based on demand
 - **`frontend-service`** - Static content serving
 
-## 🔧 Prerequisites
+## Prerequisites
 
 ### **1. AWS Load Balancer Controller**
 ```bash
@@ -77,7 +77,7 @@ kubectl apply -f cluster-global-components/ingress/aws-load-balancer-controller.
 - Point domains to ALB endpoints
 - Route53 or external DNS provider
 
-## 📋 Deployment Order
+## Deployment Order
 
 ```bash
 # 1. Deploy AWS Load Balancer Controller
@@ -90,7 +90,7 @@ kubectl apply -f cluster-global-components/argocd/argocd-ingress.yaml
 kubectl apply -f cluster-global-components/duka-platform-ingress.yaml
 ```
 
-## 🔍 Verification Commands
+## Verification Commands
 
 ### **Check Ingress Resources**
 ```bash
@@ -126,7 +126,7 @@ curl -k https://api.duka-platform.com/payments/health
 curl -k https://app.duka-platform.com/
 ```
 
-## 💰 Cost Breakdown
+## Cost Breakdown
 
 | Component | Monthly Cost | Notes |
 |-----------|-------------|-------|
@@ -136,7 +136,7 @@ curl -k https://app.duka-platform.com/
 | Route53 (optional) | ~$0.50 | Per hosted zone |
 | **Total** | **~$32.50** | For complete ingress setup |
 
-## 🔒 Security Features
+## Security Features
 
 - **SSL Termination** at ALB level
 - **ACM Certificate** auto-renewal
@@ -144,7 +144,7 @@ curl -k https://app.duka-platform.com/
 - **Security Groups** control access
 - **Private Subnet** protection for services
 
-## 🚨 Important Notes
+## Important Notes
 
 1. **Update Certificate ARNs** before deployment
 2. **Configure DNS** to point to ALB endpoints  
@@ -152,7 +152,7 @@ curl -k https://app.duka-platform.com/
 4. **Health checks** configured for each service
 5. **SSL redirect** enforced (HTTP → HTTPS)
 
-## 🔧 Customization
+## Customization
 
 ### **Add New Microservice**
 ```yaml

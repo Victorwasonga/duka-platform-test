@@ -1,13 +1,13 @@
-# 🚀 Cluster Global Components Deployment Guide
+# Cluster Global Components Deployment Guide
 
 This guide provides the correct order to manually deploy all cluster global components on EC2 worker nodes.
 
-## 📋 Prerequisites
+## Prerequisites
 - EKS cluster running with at least one EC2 worker node
 - kubectl configured to access the cluster
 - All components configured with EC2 nodeSelectors
 
-## 🎯 Deployment Order
+## Deployment Order
 
 ### 1. **Namespaces** (Foundation)
 ```bash
@@ -56,7 +56,7 @@ kubectl apply -f cluster-global-components/production-loadbalancer.yaml
 ```
 **Creates:** NLB LoadBalancer service for production applications (~$16/month)
 
-## 🔍 Verification Commands
+## Verification Commands
 
 ### Check All Components
 ```bash
@@ -87,7 +87,7 @@ kubectl get pods -n argocd -o wide
 kubectl get pods -n kube-system -l k8s-app=metrics-server -o wide
 ```
 
-## 🌐 Access ArgoCD
+## Access ArgoCD
 
 ### Option 1: Port Forward (Recommended)
 ```bash
@@ -105,7 +105,7 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 ```
 
-## 📊 Component Status
+## Component Status
 
 | Component | Namespace | Node Type | Purpose |
 |-----------|-----------|-----------|---------|
@@ -116,7 +116,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 | ArgoCD | argocd | EC2 | GitOps deployment |
 | LoadBalancer | - | - | External app access |
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Metrics Server Issues
 ```bash
@@ -134,17 +134,17 @@ kubectl get deployment argocd-server -n argocd -o yaml | grep -A 3 nodeSelector
 kubectl get deployment metrics-server -n kube-system -o yaml | grep -A 3 nodeSelector
 ```
 
-## ✅ Success Criteria
+## Success Criteria
 
-- [ ] All namespaces created
-- [ ] RBAC roles and bindings active
-- [ ] Storage CSI driver running
-- [ ] Metrics server responding (`kubectl top nodes` works)
-- [ ] ArgoCD UI accessible
-- [ ] All components running on EC2 worker nodes
-- [ ] No pods stuck in Pending state
+- All namespaces created
+- RBAC roles and bindings active
+- Storage CSI driver running
+- Metrics server responding (`kubectl top nodes` works)
+- ArgoCD UI accessible
+- All components running on EC2 worker nodes
+- No pods stuck in Pending state
 
-## 🚀 Next Steps
+## Next Steps
 
 After successful deployment:
 1. Configure ArgoCD repositories
